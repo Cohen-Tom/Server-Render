@@ -1,24 +1,19 @@
 import os
-import subprocess
 from flask import Flask, jsonify
 from dotenv import load_dotenv
-import time
 
-# Load environment variables (for local dev only)
+# Load environment variables only when running locally
 if os.path.exists("development.env"):
     load_dotenv("development.env")
 
-try:
-    from livekit.api import AccessToken, VideoGrants
-except ImportError:
-    raise ImportError("Install livekit-api: pip install livekit-api")
+from livekit.api import AccessToken, VideoGrants
 
 app = Flask(__name__)
 
-def get_env_var(var_name):
-    value = os.getenv(var_name)
+def get_env_var(name):
+    value = os.getenv(name)
     if not value:
-        raise ValueError(f"Environment variable '{var_name}' is not set.")
+        raise ValueError(f"Missing environment variable: {name}")
     return value
 
 @app.route("/getToken")
@@ -31,28 +26,15 @@ def get_token():
         .with_identity("identity")
         .with_name("mobile-app")
         .with_grants(VideoGrants(room_join=True, room="my-room"))
+        .to_jwt()
     )
 
-    return jsonify({"token": token.to_jwt()})
-
-
-# Optional : launch an extra script if needed
-def launch_orion():
-    time.sleep(2)
-    try:
-        script_path = os.path.join(os.path.dirname(__file__), "Launch_Me.py")
-        subprocess.Popen(["python", script_path])
-        print("🚀 Launch_Me.py started in background.")
-    except Exception as e:
-        print(f"⚠️ Error running Launch_Me.py: {e}")
+    return jsonify({"token": token})
 
 if __name__ == "__main__":
-    print("⚡ Starting Flask server on Render...")
-
-    # On Render, this is ignored because Gunicorn handles serving,
-    # but it remains useful for local testing.
+    print("🚀 Flask server started (local mode)")
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
+        port=int(os.environ.get("PORT", 5000)),  # Render injecte PORT automatiquement
         debug=False
     )
